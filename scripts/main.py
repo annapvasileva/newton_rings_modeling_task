@@ -10,7 +10,7 @@ MIN_RADIUS_OF_CURVATURE = 1.0               # м
 MAX_DELTA_LAMBDA = 10.0                     # нм
 MAX_DISTANCE_FROM_LENSE_CENTER = 5e-3       # м
 NUM_OF_DOTS = 2000
-NUM_OF_DOTS_GRID = 500
+NUM_OF_DOTS_GRID = 1000
 NUM_OF_LAMBDAS = 100
 I0 = 1                                      # W/m2
 N_LAMBDA = 100                              # число отдельно взятых длин волн из спектра
@@ -132,7 +132,9 @@ def build_visualization_monochromatic(R : float, lambda0 : float):
 
     image_rgb /= image_rgb.max()
     plt.imshow(image_rgb, extent=[-5, 5, -5, 5])
-    plt.title("Кольца Ньютона в монохроматическом свете")
+    plt.title(f"Кольца Ньютона в монохроматическом свете\nλ = {lambda0 * 1e9} нм, R = {R} м")
+    plt.xlabel("мм")
+    plt.ylabel("мм")
     plt.show()
 
 def build_intensity_graph_quasi_monochromatic(R : float, lambda0 : float, delta_lambda : float):
@@ -172,7 +174,9 @@ def build_visualization_quasi_monochromatic(R : float, lambda0 : float, delta_la
 
     image_rgb /= image_rgb.max()
     plt.imshow(image_rgb, extent=[-5, 5, -5, 5])
-    plt.title("Кольца Ньютона в квазимонохроматическом свете")
+    plt.title(f"Кольца Ньютона в квазимонохроматическом свете\nλ = {lambda0 * 1e9} нм, Δλ = {delta_lambda * 1e9} нм, R = {R} м")
+    plt.xlabel("мм")
+    plt.ylabel("мм")
     plt.show()
 
 def monochromatic_light(R : float, lambda0 : float):
