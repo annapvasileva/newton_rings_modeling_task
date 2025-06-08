@@ -11,7 +11,7 @@ MAX_DELTA_LAMBDA = 10.0                     # нм
 MAX_DISTANCE_FROM_LENSE_CENTER = 5e-3       # м
 NUM_OF_DOTS = 2000
 NUM_OF_DOTS_GRID = 1000
-NUM_OF_LAMBDAS = 100
+NUM_OF_LAMBDAS = 200
 I0 = 1                                      # W/m2
 N_LAMBDA = 100                              # число отдельно взятых длин волн из спектра
 
@@ -24,7 +24,7 @@ def get_input():
     while is_invalid:
         lense_radius = float(input("Введите радиус кривизны линзы (м): "))
         if lense_radius < MIN_RADIUS_OF_CURVATURE - EPSILON:
-            print(f"Радиус должен быть не менее {MIN_RADIUS_OF_CURVATURE} м!")
+            print(f"Радиус должен быть не менее {MIN_RADIUS_OF_CURVATURE:.2f} м!")
         else:
             is_invalid = False
     
@@ -33,7 +33,7 @@ def get_input():
     while is_invalid:
         lambda0 = float(input("Введите длину волны (нм): "))
         if (lambda0 < VISIBLE_SPECTRUM_LOWER_LIMIT - EPSILON or lambda0 > VISIBLE_SPECTRUM_UPPER_LIMIT + EPSILON):
-            print(f"Длина волны должна быть в пределах видимого спектра ({VISIBLE_SPECTRUM_LOWER_LIMIT} - {VISIBLE_SPECTRUM_UPPER_LIMIT} нм)!")
+            print(f"Длина волны должна быть в пределах видимого спектра ({VISIBLE_SPECTRUM_LOWER_LIMIT:.2f} - {VISIBLE_SPECTRUM_UPPER_LIMIT:.2f} нм)!")
         else:
             is_invalid = False
     
@@ -62,7 +62,7 @@ def get_input():
         elif delta_lambda > MAX_DELTA_LAMBDA + EPSILON:            
             print(f"Ширина спектра не должна превышать {MAX_DELTA_LAMBDA}, чтобы свет считался квазимонохроматическим!")
         elif lambda0 + delta_lambda / 2 > VISIBLE_SPECTRUM_UPPER_LIMIT + EPSILON or lambda0 - delta_lambda / 2 < VISIBLE_SPECTRUM_LOWER_LIMIT - EPSILON:
-            print(f"Спектр должен быть в пределах видимого спектра ({VISIBLE_SPECTRUM_LOWER_LIMIT} - {VISIBLE_SPECTRUM_UPPER_LIMIT} нм)!")
+            print(f"Спектр должен быть в пределах видимого спектра ({VISIBLE_SPECTRUM_LOWER_LIMIT:.2f} - {VISIBLE_SPECTRUM_UPPER_LIMIT:.2f} нм)!")
         else:
             is_invalid = False
     
@@ -132,7 +132,7 @@ def build_visualization_monochromatic(R : float, lambda0 : float):
 
     image_rgb /= image_rgb.max()
     plt.imshow(image_rgb, extent=[-5, 5, -5, 5])
-    plt.title(f"Кольца Ньютона в монохроматическом свете\nλ = {lambda0 * 1e9} нм, R = {R} м")
+    plt.title(f"Кольца Ньютона в монохроматическом свете\nλ = {lambda0 * 1e9:.2f} нм, R = {R:.2f} м")
     plt.xlabel("мм")
     plt.ylabel("мм")
     plt.show()
@@ -174,7 +174,7 @@ def build_visualization_quasi_monochromatic(R : float, lambda0 : float, delta_la
 
     image_rgb /= image_rgb.max()
     plt.imshow(image_rgb, extent=[-5, 5, -5, 5])
-    plt.title(f"Кольца Ньютона в квазимонохроматическом свете\nλ = {lambda0 * 1e9} нм, Δλ = {delta_lambda * 1e9} нм, R = {R} м")
+    plt.title(f"Кольца Ньютона в квазимонохроматическом свете\nλ = {lambda0 * 1e9:.2f} нм, Δλ = {delta_lambda * 1e9:.2f} нм, R = {R:.2f} м")
     plt.xlabel("мм")
     plt.ylabel("мм")
     plt.show()
@@ -186,9 +186,79 @@ def monochromatic_light(R : float, lambda0 : float):
 def quasi_monochromatic_light(R : float, lambda0 : float, delta_lambda : float):
     build_intensity_graph_quasi_monochromatic(R, lambda0, delta_lambda)
     build_visualization_quasi_monochromatic(R, lambda0, delta_lambda)
-    
+
+def build_intensity_graph_white(R : float):
+    lambda0 = (VISIBLE_SPECTRUM_UPPER_LIMIT + VISIBLE_SPECTRUM_LOWER_LIMIT) / 2 * 1e-9
+    delta_lambda = (VISIBLE_SPECTRUM_UPPER_LIMIT - VISIBLE_SPECTRUM_LOWER_LIMIT) / 2 * 1e-9
+    r = np.linspace(-MAX_DISTANCE_FROM_LENSE_CENTER, MAX_DISTANCE_FROM_LENSE_CENTER, NUM_OF_DOTS)
+    d = R - np.sqrt(R * R - r * r)
+    lambdas = np.linspace(lambda0 - delta_lambda/2, lambda0 + delta_lambda/2, N_LAMBDA)
+    I_total = np.zeros_like(r)
+    for l in lambdas:
+        I_total += 4 * I0 * np.cos(2 * np.pi * d / l + np.pi/2)**2
+    I_total /= N_LAMBDA
+
+    plt.plot(r * 1e3, I_total)
+    plt.xlabel("Радиус r (мм)")
+    plt.ylabel("Интенсивность I(r)")
+    plt.title("Кольца Ньютона (белый свет)")
+    plt.grid()
+    plt.show()
+
+def build_visualization_white(R : float):
+    X, Y = np.meshgrid(x, y)
+    r = np.sqrt(X**2 + Y**2)
+    d = R - np.sqrt(R * R - r * r)
+    lambda0 = (VISIBLE_SPECTRUM_UPPER_LIMIT + VISIBLE_SPECTRUM_LOWER_LIMIT) / 2 * 1e-9
+    delta_lambda = (VISIBLE_SPECTRUM_UPPER_LIMIT - VISIBLE_SPECTRUM_LOWER_LIMIT) / 2 * 1e-9
+    lambdas = np.linspace(lambda0-delta_lambda/2, lambda0+delta_lambda/2, NUM_OF_LAMBDAS)
+    image_rgb = np.zeros((NUM_OF_DOTS_GRID, NUM_OF_DOTS_GRID, 3))
+
+    for l in lambdas:
+        rgb = wavelength_to_rgb(l * 1e9)
+        phase = 4 * np.pi * d / l + np.pi
+        I = 4 * I0 * np.cos(phase / 2)**2
+        image_rgb[:, :, 0] += rgb[0] * I
+        image_rgb[:, :, 1] += rgb[1] * I
+        image_rgb[:, :, 2] += rgb[2] * I
+
+    image_rgb /= image_rgb.max()
+    plt.imshow(image_rgb, extent=[-5, 5, -5, 5])
+    plt.title(f"Кольца Ньютона в белом свете, R = {R:.2f} м")
+    plt.xlabel("мм")
+    plt.ylabel("мм")
+    plt.show()
+
+def white_light(R : float):
+    build_intensity_graph_white(R)
+    build_visualization_white(R)
 
 def main():
+    is_invalid = True
+    is_white = False
+    while is_invalid:
+        ch = input("Хотите рассмотреть модель при белом свете? [y/n] ")
+        if ch == 'y' or ch == 'д':
+            is_white = True
+            is_invalid = False
+        elif ch =='n' or ch == 'н':
+            is_white = False
+            is_invalid = False
+        else:
+            print("Такого варианта ответа нет!")
+    if is_white:
+        lense_radius = 0.0
+        is_invalid = True
+        while is_invalid:
+            lense_radius = float(input("Введите радиус кривизны линзы (м): "))
+            if lense_radius < MIN_RADIUS_OF_CURVATURE - EPSILON:
+                print(f"Радиус должен быть не менее {MIN_RADIUS_OF_CURVATURE:.2f} м!")
+            else:
+                is_invalid = False
+                
+        white_light(lense_radius)
+        return
+     
     args = get_input()
     if args[2]:
         monochromatic_light(args[0], args[1])
